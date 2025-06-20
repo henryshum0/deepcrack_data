@@ -53,12 +53,12 @@ if __name__ == "__main__":
     img_path = "test/processed_imgs"
     mask_path = "test/processed_masks"
     transforms_list = [
-        # T.random_crop,
-        # T.random_horizontal_flip,
-        # T.normalize,
-        # T.random_affine,
-        # T.random_rotation,
-        # T.random_color_jitter,
+        T.random_crop,
+        T.random_horizontal_flip,
+        T.normalize,
+        T.random_affine,
+        T.random_rotation,
+        T.random_color_jitter,
         T.random_gaussian_blur
     ]
     dataset = CrackDataset(img_path=img_path, mask_path=mask_path, transforms=transforms_list)
