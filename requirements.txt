@@ -1,0 +1,6 @@
+conda-forge::matplotlib
+conda-forge::opencv
+conda-forge::matplotlib
+anaconda::numpy
+anaconda::pathlib
+conda-forge::pytest-shutil

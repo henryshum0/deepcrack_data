@@ -1,6 +1,5 @@
 import os
 import shutil
-from skimage import io
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -34,10 +33,10 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None, img_out_dir:str=
             img_path = os.path.join(img_in_dir, f)
             label_path = os.path.join(label_in_dir, os.path.splitext(f)[0] + "_GT.png")
 
-            label = io.imread(label_path)
-            img = io.imread(img_path)
+            label = cv2.imread(label_path)
+            img = cv2.imread(img_path)
             
-            #re-orient the image and label if they are not in the same orientation
+            #re-orient the image and label if they are not in the same orientatcv2n
             if img.shape[0] != label.shape[0] or img.shape[1] != label.shape[1]:
                 print(f"image {img_path} and label {label_path} have different shapes, reshaping label to match image shape.")
                 print("close window to continue...")
@@ -52,7 +51,7 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None, img_out_dir:str=
             label_out_path = os.path.join(label_out_dir,prefix, fname_l)
 
             shutil.copy(img_path, img_out_path)
-            io.imsave(label_out_path, label, check_contrast=False)
+            cv2.imwrite(label_out_path, label)
             print(f"Saved {img_path} to {img_out_path}")
             print(f"Saved {label_path} to {label_out_path}")
             print(img.shape, label.shape)
@@ -63,11 +62,11 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None, img_out_dir:str=
     print(f"Formatted {count} images and labels.")
         
     
-if __name__ == "__main__":
-    img_in_dir = "/home/user/henryshum0/Pytorch-UNet/Crack/images"
-    label_in_dir = "/home/user/henryshum0/Pytorch-UNet/Crack/gt"
-    img_out_dir = "/home/user/henryshum0/Pytorch-UNet/test/imgs"
-    label_out_dir = "/home/user/henryshum0/Pytorch-UNet/test/masks"
+# if __name__ == "__main__":
+    # img_in_dir = "Crack/images"
+    # label_in_dir = "Crack/gt"
+    # img_out_dir = "test/imgs"
+    # label_out_dir = "test/masks"
     # prefix = "formatted"
 
-    formatting_data(img_in_dir, label_in_dir, img_out_dir, label_out_dir)
+    # formatting_data(img_in_dir, label_in_dir, img_out_dir, label_out_dir)
