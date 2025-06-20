@@ -24,15 +24,16 @@ def random_horizontal_flip(image, mask):
 def normalize(image, mask):
     """
     Normalize the image with the given mean and standard deviation.
+    normalization on our data may actually cause the cracks in image to be less visible
     """
-    image = transforms.functional.normalize(image, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    image = transforms.functional.normalize(image, mean=[.45, .45, .45], std=[0.229, 0.224, 0.225])
     return image, mask
 
 def random_affine(image, mask):
     """
     Apply random affine transformation to the image and mask.
     """
-    angle = transforms.RandomAffine.get_params([-30, 30], [0.5, 1.5], [0.5, 1.5], [0.5, 1.5], img_size=image.shape)
+    angle = transforms.RandomAffine.get_params(degrees=[-10, 10], translate=[0.1, .5], scale_ranges=[0.7, 1.5], shears=None, img_size=image.shape)
     image = transforms.functional.affine(image, angle=angle[0], translate=angle[1], scale=angle[2], shear=angle[3])
     mask = transforms.functional.affine(mask, angle=angle[0], translate=angle[1], scale=angle[2], shear=angle[3])
     return image, mask
