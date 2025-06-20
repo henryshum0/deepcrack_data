@@ -238,11 +238,11 @@ if __name__ == "__main__":
     #     print(mask.shape)
     #     plt.show(block=True)
         
-    # #testing both load and save
-    # pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
-    #                           img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
-    #                           img_save_dir=img_save_dir, mask_save_dir=mask_save_dir)
-    # print(pipeline())
+    #testing both load and save
+    pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
+                              img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
+                              img_save_dir=img_save_dir, mask_save_dir=mask_save_dir)
+    print(pipeline())
     
     # #testing on the fly transformation
     # pipeline = DataGenPipeline(save=False, load=False, transforms=transforms) 
