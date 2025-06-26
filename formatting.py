@@ -4,7 +4,9 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-def formatting_data(img_in_dir:str=None, label_in_dir:str=None, img_out_dir:str=None, label_out_dir:str=None, prefix:str=''):
+def formatting_data(img_in_dir:str=None, label_in_dir:str=None, 
+                    img_out_dir:str=None, label_out_dir:str=None, 
+                    saving_prefix:str='', label_postfix:str='_GT'):
     """
     Formatting the input images and labels to a standardized format.
     ensure that image is RGB png having 3 channels img.shape = (M, N, 3) 
@@ -31,7 +33,7 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None, img_out_dir:str=
             fname_l = f"{count}.png"
 
             img_path = os.path.join(img_in_dir, f)
-            label_path = os.path.join(label_in_dir, os.path.splitext(f)[0] + "_GT.png")
+            label_path = os.path.join(label_in_dir, os.path.splitext(f)[0] + label_postfix + ".png")
 
             label = cv2.imread(label_path)
             img = cv2.imread(img_path)
@@ -47,8 +49,8 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None, img_out_dir:str=
             #ensure the label is binary and has 1 channel i.e. 2 dimensions
             label = np.round(label/255).astype(np.uint8)[:,:,0]*255 #multiply 255 to display mask on png also
 
-            img_out_path = os.path.join(img_out_dir,prefix, fname_i)
-            label_out_path = os.path.join(label_out_dir,prefix, fname_l)
+            img_out_path = os.path.join(img_out_dir,saving_prefix, fname_i)
+            label_out_path = os.path.join(label_out_dir,saving_prefix, fname_l)
 
             shutil.copy(img_path, img_out_path)
             cv2.imwrite(label_out_path, label)
@@ -61,12 +63,13 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None, img_out_dir:str=
 
     print(f"Formatted {count} images and labels.")
         
-    
-# if __name__ == "__main__":
-    # img_in_dir = "Crack/images"
-    # label_in_dir = "Crack/gt"
-    # img_out_dir = "test/imgs"
-    # label_out_dir = "test/masks"
-    # prefix = "formatted"
 
-    # formatting_data(img_in_dir, label_in_dir, img_out_dir, label_out_dir)
+#  Example usage:
+if __name__ == "__main__":
+    img_in_dir = "Crack/images"
+    label_in_dir = "Crack/gt"
+    img_out_dir = "test/imgs"
+    label_out_dir = "test/masks"
+    prefix = "formatted"
+
+    formatting_data(img_in_dir, label_in_dir, img_out_dir, label_out_dir)

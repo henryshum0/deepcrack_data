@@ -1,9 +1,9 @@
 from torch.utils.data import Dataset
 from torchvision import transforms
 import numpy as np
-import own_transfroms as T
 from pathlib import Path
-from PIL import Image
+import cv2
+import data_generation as T
 
 class CrackDataset(Dataset):
     def __init__(self, img_path:str=None, mask_path:str=None, transforms=[]):
@@ -29,37 +29,28 @@ class CrackDataset(Dataset):
         
         self.data = list(zip(self.img_files, self.mask_files))
         self.data = sorted(self.data, key=lambda x: int(x[0].stem))
-        self.transforms = transforms
+        self.transform_pipeline = T.DataGenPipeline(transforms)
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
         img_file, mask_file = self.data[idx]
-        image = transforms.ToTensor()(Image.open(img_file).convert("RGB"))
-        mask = transforms.ToTensor()(Image.open(mask_file).convert("L"))
+        image = transforms.ToTensor()(cv2.imread(str(img_file), cv2.IMREAD_COLOR))
+        mask = transforms.ToTensor()(cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE))
 
-        if self.transforms:
-            for transform in self.transforms:
-                image, mask = transform(image, mask)
-
-
+        if self.transform_pipeline:
+            image, mask = self.transform_pipeline(image, mask)
         return image, mask
     
 if __name__ == "__main__":
     
     #run the formatting.py first
     
-    img_path = "test/processed_imgs"
-    mask_path = "test/processed_masks"
+    img_path = "test/imgs"
+    mask_path = "test/masks"
     transforms_list = [
-        T.random_crop,
-        T.random_horizontal_flip,
-        T.normalize,
-        T.random_affine,
-        T.random_rotation,
-        T.random_color_jitter,
-        T.random_gaussian_blur
+        
     ]
     dataset = CrackDataset(img_path=img_path, mask_path=mask_path, transforms=transforms_list)
     print(f"Dataset size: {len(dataset)}")

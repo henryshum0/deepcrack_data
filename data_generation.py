@@ -69,7 +69,76 @@ class RandomFlip():
             mask = cv2.flip(mask, 0)
         
         return image, mask
+
+class RandomBoostContrast():
+    """
+    Boost the contrast of the image.
+    """
+    def __call__(self, image=None, mask=None):
+        assert image is not None, "Image must be provided for contrast boosting."
+        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
+        alpha = np.random.uniform(1.3, 2)  # Contrast factor, can be adjusted
+        # Convert to float32 for better precision
+        image = image.astype(np.float32)
         
+        # Boost the contrast by multiplying by a factor
+        image = cv2.convertScaleAbs(image, alpha=alpha, beta=0)  # Adjust alpha for contrast
+        
+        return image, mask
+    
+class RandomJitter():
+    """
+    Randomly adjust brightness, contrast, saturation, and hue of the image.
+    """
+    def __call__(self, image=None, mask=None):
+        assert image is not None, "Image must be provided for random jitter."
+        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
+        
+        # Randomly adjust brightness
+        brightness = np.random.uniform(0.5, 1.5)
+        image = cv2.convertScaleAbs(image, alpha=brightness, beta=0)
+        
+        # Randomly adjust contrast
+        contrast = np.random.uniform(0.5, 1.5)
+        image = cv2.convertScaleAbs(image, alpha=contrast, beta=0)
+        
+        # Randomly adjust saturation
+        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        hsv_image[:, :, 1] = np.clip(hsv_image[:, :, 1] * np.random.uniform(0.5, 1.5), 0, 255)
+        image = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
+        
+        # Randomly adjust hue
+        hsv_image[:, :, 0] = ((hsv_image[:, :, 0].astype(int) + np.random.randint(-10, 10)) % 180).astype(np.uint8)  # Hue values are in [0, 180] for OpenCV
+        image = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
+        
+        return image, mask
+    
+class RandomGaussianNoise():
+    """
+    Add random Gaussian noise to the image.
+    """
+    def __call__(self, image=None, mask=None):
+        assert image is not None, "Image must be provided for adding Gaussian noise."
+        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
+        
+        sigma = np.random.uniform(1, 6)  # Randomly select a sigma value for noise
+        noise = np.random.normal(0, sigma, image.shape).astype(np.uint8)
+        noisy_image = cv2.add(image, noise)
+        
+        return noisy_image, mask
+
+class RandomGaussianBlur():
+    """
+    Apply random Gaussian blur to the image.
+    """
+    def __call__(self, image=None, mask=None, ksize=(3, 3), sigmaX=0):
+        assert image is not None, "Image must be provided for Gaussian blur."
+        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
+        
+        blurred_image = cv2.GaussianBlur(image, ksize, sigmaX)
+        
+        return blurred_image, mask
+
 class RandomCropResize():
     def __init__(self, has_mask:float = 0.9, size=(256, 256)):
         self.has_mask = has_mask
@@ -86,8 +155,8 @@ class RandomCropResize():
                 cropped_image, cropped_mask = self.random_crop(image, mask)
             else:
                 center_y, center_x = mask_indices.mean(axis=0).astype(int)
-                center_y += int(randint(-3, 3) * image.shape[0]/640 * 50)
-                center_x += int(randint(-3, 3) * image.shape[1]/640 * 50)
+                center_y += int(randint(-3, 3) * image.shape[0]/640 * 25)
+                center_x += int(randint(-3, 3) * image.shape[1]/640 * 25)
                 center_x = min(max(0, center_x), image.shape[1] - 256)
                 center_y = min(max(0, center_y), image.shape[0] - 256)
                 cropped_image, cropped_mask = self.random_crop(image, mask, center_x, center_y)
@@ -106,18 +175,42 @@ class RandomRotateRandomCropResize():
         cropped_img, cropped_mask = self.random_crop(rotated_img, rotated_mask)
         resized_img, resized_mask = self.resize(cropped_img, cropped_mask)
         return resized_img, resized_mask
+    
+class RandomSequential():
+    """
+    Apply a random sequence of transformations to the image and mask.
+    """
+    def __init__(self, transforms, p=0.3):
+        self.transforms = transforms
+        self.p = 0.3
+
+    def __call__(self, image=None, mask=None):
+        assert image is not None, "Image must be provided for random sequence of transformations."
+        assert mask is not None, "Mask must be provided for random sequence of transformations."
+        
+        for transform in self.transforms:
+            if np.random.rand() < self.p:  # Randomly apply each transformation
+                assert callable(transform), f"Transform {transform} is not callable."
+                if isinstance(transform, (Resize, RandomCrop, RandomRotate, RandomFlip, RandomBoostContrast, 
+                                          RandomJitter, RandomGaussianNoise, RandomGaussianBlur)):
+                    image, mask = transform(image, mask)
+                else:
+                    raise ValueError(f"Unsupported transform type: {type(transform)}")
+        return image, mask
 
 class DataGenPipeline():
-    def __init__(self, save:bool=False, load:bool=False, transforms=None, img_ld_dir:str=None, mask_ld_dir:str=None, 
-                 img_save_dir:str=None, mask_save_dir:str=None):
-        if load and (img_ld_dir is None  or mask_ld_dir is None):
-            raise FileNotFoundError("Image and mask load directories must be specified.")
-        if transforms is None or not isinstance(transforms, list) or transforms == []: 
-            raise ValueError("Transforms must be a non-empty list of callable transformations.")
-        
+    def __init__(self, save:bool=False, load:bool=False, transforms=[], img_ld_dir:str=None, mask_ld_dir:str=None, 
+                 img_save_dir:str=None, mask_save_dir:str=None, count:int=1):
         if load:
             self.img_ld_dir = Path(img_ld_dir)
             self.mask_ld_dir = Path(mask_ld_dir)
+            if not self.img_ld_dir.exists():
+                raise FileNotFoundError(f"Image load directory {self.img_ld_dir} does not exist.")
+            if not self.mask_ld_dir.exists():
+                raise FileNotFoundError(f"Mask load directory {self.mask_ld_dir} does not exist.")
+        # if transforms is None or not isinstance(transforms, list) or transforms == []: 
+        #     raise ValueError("Transforms must be a non-empty list of callable transformations.")
+            
             
         if save:
             if img_save_dir is None or mask_save_dir is None:
@@ -132,6 +225,7 @@ class DataGenPipeline():
         self.save = save
         self.transforms = transforms
         self.id = 0
+        self.count = count
 
     def __call__(self, image=None, mask=None):
         #case: when both load and save are true, pipeline processes all images and masks in the directories
@@ -175,6 +269,8 @@ class DataGenPipeline():
             img_path = self.img_save_dir / f"{self.id}.png"
             mask_path = self.mask_save_dir / f"{self.id}.png"
             cv2.imwrite(str(img_path), image)
+            mask = (mask / 255).astype(np.uint8)*255  # Ensure mask is in the correct format
+            assert np.unique(mask).all() in [0, 1, 255], "Mask should be binary or grayscale with values 0, 1, or 255."
             cv2.imwrite(str(mask_path), mask)
             print(f"Saved {img_path} and {mask_path}")
             print(f"Image shape: {image.shape}, Mask shape: {mask.shape}")
@@ -192,13 +288,15 @@ class DataGenPipeline():
             img_files = sorted(img_files)
             mask_files = sorted(mask_files)
             if len(img_files) != len(mask_files):
-                raise ValueError("Number of images and masks do not match.")
-            for img_file, mask_file in zip(img_files, mask_files):
-                image = cv2.imread(str(img_file))
-                mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
-                print(f"Loading {img_file} and {mask_file}")
-                print(f"Image shape: {image.shape}, Mask shape: {mask.shape}")
-                yield self.apply_transforms(image, mask)
+                raise ValueError("Number of input images and masks do not match.")
+            while self.count > 0:
+                for img_file, mask_file in zip(img_files, mask_files):
+                    image = cv2.imread(str(img_file))
+                    mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
+                    print(f"Loading {img_file} and {mask_file}")
+                    print(f"Image shape: {image.shape}, Mask shape: {mask.shape}")
+                    yield self.apply_transforms(image, mask)
+                self.count -= 1
         else:
             raise RuntimeError("Load mode is not enabled. Cannot load data.")
         
@@ -210,13 +308,31 @@ if __name__ == "__main__":
     img = cv2.imread('test/imgs/0.png')
     mask = cv2.imread('test/masks/0.png', cv2.IMREAD_GRAYSCALE)
     
+    crack_img_dir = "Crack/images"
+    crack_mask_dir = "Crack/gt"
+    
     img_ld_dir = 'test/imgs'
     mask_ld_dir = 'test/masks'
     
     img_save_dir = 'test/processed_imgs'
     mask_save_dir = 'test/processed_masks'
     
-    transforms = [RandomCrop(), Resize((256, 256))]
+    aug_img_dir = 'test/contrast_imgs'
+    aug_mask_dir = 'test/contrast_masks'
+    
+    # noncontrast_img_dir = 'test/noncontrast_imgs'
+    # noncontrast_mask_dir = 'test/noncontrast_masks'
+    
+    transforms = [  #transfroms to apply
+        RandomSequential([        #randomly select and apply transfroms
+            RandomRotate(),
+            RandomFlip(),
+            RandomJitter(),
+            RandomGaussianNoise(),
+            RandomGaussianBlur(),
+        ], p=0.5),
+        RandomCropResize(size=(448, 448)),  #resize after cropping
+    ]                  
     
     # #testing save only
     # pipeline = DataGenPipeline(save=True, load=False, transforms=transforms,
@@ -241,7 +357,7 @@ if __name__ == "__main__":
     #testing both load and save
     pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
                               img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
-                              img_save_dir=img_save_dir, mask_save_dir=mask_save_dir)
+                              img_save_dir=aug_img_dir, mask_save_dir=aug_mask_dir, count=10)
     print(pipeline())
     
     # #testing on the fly transformation
@@ -254,3 +370,45 @@ if __name__ == "__main__":
     # plt.imshow(mask_aug, cmap='gray')
     # print(mask_aug.shape)
     # plt.show(block=True)
+    
+    # ld_dir = Path(img_ld_dir)
+    # mk_dir = Path(mask_ld_dir)
+    # img_files = ld_dir.glob('*.png')
+    # pipeline1 = DataGenPipeline(save=False, load=False, transforms=transforms,
+    #                             img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
+    #                             img_save_dir=img_save_dir, mask_save_dir=mask_save_dir, count=1)
+    # pipeline2 = DataGenPipeline(save=False, load=False, transforms=[Resize((256,256))],
+    #                             img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
+    #                             img_save_dir=img_save_dir, mask_save_dir=mask_save_dir, count=1)
+    # #pipelines are created to transfrom images
+    # # when pipeline is input with image and mask, the transfroms are applied
+    # # on the fly. 
+    # out_img = None
+    # plt.figure(figsize=(20, 20))
+    # for i in range(4):
+    #     img_file = str(next(img_files))
+    #     mask_file = str(mk_dir / img_file.split('/')[-1])
+    #     print(img_file, mask_file)
+    #     img = cv2.imread(img_file)
+    #     mask = cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE)
+        
+    #     img_resized, mask_resized = pipeline2(img, mask)
+    #     img_aug, mask_aug = pipeline1(img_resized, mask_resized)
+        
+    #     mask_3d = np.stack([mask_resized] * 3, axis=-1)  # Convert mask to 3D for concatenation
+    #     mask_aug_3d = np.stack([mask_aug] * 3, axis=-1)  # Convert mask to 3D for concatenation
+    #     if out_img is None:
+    #         out_img = np.concatenate([img_resized, mask_3d, img_aug, mask_aug_3d], axis=1)
+    #     else:
+    #         iiiimg = np.concatenate([img_resized, mask_3d, img_aug, mask_aug_3d], axis=1)
+    #         out_img = np.concatenate([out_img, iiiimg], axis=0)
+            
+    #     plt.imshow(out_img)
+    #     plt.axis('off')
+    
+    # plt.show(block=True)
+
+
+# On the left are original resized images
+# On the right are augmented images with masks
+        
