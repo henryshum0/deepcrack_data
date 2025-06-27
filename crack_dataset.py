@@ -1,6 +1,5 @@
 from torch.utils.data import Dataset
 from torchvision import transforms
-import numpy as np
 from pathlib import Path
 import cv2
 import data_generation as T
@@ -36,12 +35,12 @@ class CrackDataset(Dataset):
 
     def __getitem__(self, idx):
         img_file, mask_file = self.data[idx]
-        image = transforms.ToTensor()(cv2.imread(str(img_file), cv2.IMREAD_COLOR))
-        mask = transforms.ToTensor()(cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE))
+        image = cv2.imread(str(img_file), cv2.IMREAD_COLOR)
+        mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
 
         if self.transform_pipeline:
             image, mask = self.transform_pipeline(image, mask)
-        return image, mask
+        return transforms.ToTensor()(image), transforms.ToTensor()(mask)
     
 if __name__ == "__main__":
     
@@ -66,4 +65,4 @@ if __name__ == "__main__":
         plt.imshow(mask.squeeze(), cmap='gray')
         plt.show()
         # Note: The above visualization code is commented out to avoid unnecessary imports.
-        # Uncomment it if you want to visualize the images and masks.   
+        # Uncomment it if you want to visualize the images and masks.  

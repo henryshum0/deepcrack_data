@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from random import randint
 from pathlib import Path
+import os
 
 class Resize():
     """
@@ -200,7 +201,8 @@ class RandomSequential():
 
 class DataGenPipeline():
     def __init__(self, save:bool=False, load:bool=False, transforms=[], img_ld_dir:str=None, mask_ld_dir:str=None, 
-                 img_save_dir:str=None, mask_save_dir:str=None, count:int=1):
+                 img_save_dir:str=None, mask_save_dir:str=None, count:int=1, 
+                 mask_suffix:str=''):
         if load:
             self.img_ld_dir = Path(img_ld_dir)
             self.mask_ld_dir = Path(mask_ld_dir)
@@ -226,6 +228,7 @@ class DataGenPipeline():
         self.transforms = transforms
         self.id = 0
         self.count = count
+        self.mask_suffix = mask_suffix
 
     def __call__(self, image=None, mask=None):
         #case: when both load and save are true, pipeline processes all images and masks in the directories
@@ -288,12 +291,13 @@ class DataGenPipeline():
             img_files = sorted(img_files)
             mask_files = sorted(mask_files)
             if len(img_files) != len(mask_files):
-                raise ValueError("Number of input images and masks do not match.")
+                raise ValueError("Number of input images and masks do not match." f"{len(img_files)} images and {len(mask_files)} masks found.")
             while self.count > 0:
-                for img_file, mask_file in zip(img_files, mask_files):
+                for img_file in img_files:
                     image = cv2.imread(str(img_file))
-                    mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
+                    mask_file = self.mask_ld_dir / (img_file.stem + self.mask_suffix + ".png")
                     print(f"Loading {img_file} and {mask_file}")
+                    mask = cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE)
                     print(f"Image shape: {image.shape}, Mask shape: {mask.shape}")
                     yield self.apply_transforms(image, mask)
                 self.count -= 1
@@ -356,8 +360,8 @@ if __name__ == "__main__":
         
     #testing both load and save
     pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
-                              img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
-                              img_save_dir=aug_img_dir, mask_save_dir=aug_mask_dir, count=10)
+                              img_ld_dir=crack_img_dir, mask_ld_dir=crack_mask_dir,
+                              img_save_dir=aug_img_dir, mask_save_dir=aug_mask_dir, count=10, mask_suffix="_GT")
     print(pipeline())
     
     # #testing on the fly transformation

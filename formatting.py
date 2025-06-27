@@ -4,9 +4,10 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-def formatting_data(img_in_dir:str=None, label_in_dir:str=None, 
+def formatting_data(img_in_dir:str=None, label_in_dir:str=None, label_in_suffix:str='_GT',
                     img_out_dir:str=None, label_out_dir:str=None, 
-                    saving_prefix:str='', label_postfix:str='_GT'):
+                    img_saving_prefix:str='', img_saving_suffix:str='',
+                    label_saving_prefix:str='', label_saving_suffix:str=''):
     """
     Formatting the input images and labels to a standardized format.
     ensure that image is RGB png having 3 channels img.shape = (M, N, 3) 
@@ -29,11 +30,11 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None,
 
     try:
         for f in images_fname:
-            fname_i = f"{count}.png" 
-            fname_l = f"{count}.png"
+            fname_i = f"{count}" 
+            fname_l = f"{count}"
 
             img_path = os.path.join(img_in_dir, f)
-            label_path = os.path.join(label_in_dir, os.path.splitext(f)[0] + label_postfix + ".png")
+            label_path = os.path.join(label_in_dir, os.path.splitext(f)[0] + label_in_suffix + ".png")
 
             label = cv2.imread(label_path)
             img = cv2.imread(img_path)
@@ -49,8 +50,8 @@ def formatting_data(img_in_dir:str=None, label_in_dir:str=None,
             #ensure the label is binary and has 1 channel i.e. 2 dimensions
             label = np.round(label/255).astype(np.uint8)[:,:,0]*255 #multiply 255 to display mask on png also
 
-            img_out_path = os.path.join(img_out_dir,saving_prefix, fname_i)
-            label_out_path = os.path.join(label_out_dir,saving_prefix, fname_l)
+            img_out_path = os.path.join(img_out_dir,img_saving_prefix + fname_i + img_saving_suffix + '.png')
+            label_out_path = os.path.join(label_out_dir,label_saving_prefix + fname_l + label_saving_suffix + '.png')
 
             shutil.copy(img_path, img_out_path)
             cv2.imwrite(label_out_path, label)
