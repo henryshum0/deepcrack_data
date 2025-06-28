@@ -132,11 +132,12 @@ class RandomGaussianBlur():
     """
     Apply random Gaussian blur to the image.
     """
-    def __call__(self, image=None, mask=None, ksize=(3, 3), sigmaX=0):
+    
+    def __call__(self, image=None, mask=None, ksize=(3, 3)):
         assert image is not None, "Image must be provided for Gaussian blur."
         assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
         
-        blurred_image = cv2.GaussianBlur(image, ksize, sigmaX)
+        blurred_image = cv2.GaussianBlur(image, ksize, sigmaX = 3, sigmaY= 3)
         
         return blurred_image, mask
 
@@ -202,7 +203,7 @@ class RandomSequential():
 class DataGenPipeline():
     def __init__(self, save:bool=False, load:bool=False, transforms=[], img_ld_dir:str=None, mask_ld_dir:str=None, 
                  img_save_dir:str=None, mask_save_dir:str=None, count:int=1, 
-                 mask_suffix:str=''):
+                 mask_suffix:str='', save_prefix:str='', save_suffix:str='', save_mask_suffix:str=''):
         if load:
             self.img_ld_dir = Path(img_ld_dir)
             self.mask_ld_dir = Path(mask_ld_dir)
@@ -229,13 +230,17 @@ class DataGenPipeline():
         self.id = 0
         self.count = count
         self.mask_suffix = mask_suffix
+        self.save_prefix = save_prefix
+        self.save_suffix = save_suffix
+        self.save_mask_suffix = save_mask_suffix
 
     def __call__(self, image=None, mask=None):
         #case: when both load and save are true, pipeline processes all images and masks in the directories
         #and saves them to the save directories, then sets load and save to False
         if self.load and self.save and image is None and mask is None:
             print("pipeline is in loand and save")
-            for img, msk in self.load_transfrom_data():
+            for transformed, _ in self.load_transfrom_data():
+                img, msk = transformed
                 self.save_data(img, msk)
             self.save = False
             self.load = False
@@ -269,8 +274,8 @@ class DataGenPipeline():
     
     def save_data(self, image, mask):
         if self.save:
-            img_path = self.img_save_dir / f"{self.id}.png"
-            mask_path = self.mask_save_dir / f"{self.id}.png"
+            img_path = self.img_save_dir / f"{self.save_prefix}{self.id}{self.save_suffix}.png"
+            mask_path = self.mask_save_dir / f"{self.save_prefix}{self.id}{self.save_suffix}{self.save_mask_suffix}.png"
             cv2.imwrite(str(img_path), image)
             mask = (mask / 255).astype(np.uint8)*255  # Ensure mask is in the correct format
             assert np.unique(mask).all() in [0, 1, 255], "Mask should be binary or grayscale with values 0, 1, or 255."
@@ -285,29 +290,26 @@ class DataGenPipeline():
         if self.load:
             img_files = []
             mask_files = []
-            for ext in ["png", "jpg", "jpeg"]:
+            for ext in ["png", "jpg", "jpeg", "JPG", "JPEG", "PNG"]:
                 img_files.extend(self.img_ld_dir.glob(f"*.{ext}"))
                 mask_files.extend(self.mask_ld_dir.glob(f"*.{ext}"))
-            img_files = sorted(img_files)
-            mask_files = sorted(mask_files)
             if len(img_files) != len(mask_files):
                 raise ValueError("Number of input images and masks do not match." f"{len(img_files)} images and {len(mask_files)} masks found.")
             while self.count > 0:
                 for img_file in img_files:
                     image = cv2.imread(str(img_file))
                     mask_file = self.mask_ld_dir / (img_file.stem + self.mask_suffix + ".png")
-                    print(f"Loading {img_file} and {mask_file}")
+                    # print(f"Loading {img_file} and {mask_file}")
                     mask = cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE)
-                    print(f"Image shape: {image.shape}, Mask shape: {mask.shape}")
-                    yield self.apply_transforms(image, mask)
+                    mask = (mask / 255).round().astype(np.uint8) * 255  # Ensure mask is in the correct format
+                    # print(f"Image shape: {image.shape}, Mask shape: {mask.shape}")
+                    yield self.apply_transforms(image, mask), (img_file, mask_file)
                 self.count -= 1
         else:
             raise RuntimeError("Load mode is not enabled. Cannot load data.")
         
 
-    
-    
-    
+
 if __name__ == "__main__":
     img = cv2.imread('test/imgs/0.png')
     mask = cv2.imread('test/masks/0.png', cv2.IMREAD_GRAYSCALE)
@@ -334,7 +336,7 @@ if __name__ == "__main__":
             RandomJitter(),
             RandomGaussianNoise(),
             RandomGaussianBlur(),
-        ], p=0.5),
+        ], p=0.8),
         RandomCropResize(size=(448, 448)),  #resize after cropping
     ]                  
     
@@ -344,24 +346,30 @@ if __name__ == "__main__":
     #                           img_save_dir=img_save_dir, mask_save_dir=mask_save_dir)
     # pipeline(img, mask)
     
-    # #testing load only
+    #testing load only
     # pipeline = DataGenPipeline(save=False, load=True, transforms=transforms,
     #                           img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir)
 
-    # for img, mask in pipeline():
-    #     print("hi")
-    #     plt.subplot(1, 2, 1)
-    #     plt.imshow(img)
-    #     print(img.shape)
-    #     plt.subplot(1, 2, 2)
-    #     plt.imshow(mask, cmap='gray')
-    #     print(mask.shape)
-    #     plt.show(block=True)
+    # for transfromed, files in pipeline():
+    #     img, mask = transfromed
+    #     img_file, mask_file = files
+    #     og_img = cv2.resize(cv2.imread(img_file), (448, 448))
+    #     og_mask = cv2.resize(cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE), (448, 448))
+    #     print(f"Loaded {img_file} and {mask_file}")
+    #     print(f"Image shape: {img.shape}, Mask shape: {mask.shape}")
+        
+        # img_out = np.concatenate([og_img, img], axis=1)  # Concatenate original and transformed images
+        # mask_out = np.concatenate([og_mask, mask], axis=1)
+        # mask_out = np.stack([mask_out] * 3, axis=-1)  # Convert mask to 3D for concatenation
+        # out_img = np.concatenate([img_out, mask_out], axis=0)  # Concatenate images and masks vertically
+        # cv2.imshow("Transformed Image and Mask", out_img)
+        # cv2.waitKey(500)
         
     #testing both load and save
     pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
                               img_ld_dir=crack_img_dir, mask_ld_dir=crack_mask_dir,
-                              img_save_dir=aug_img_dir, mask_save_dir=aug_mask_dir, count=10, mask_suffix="_GT")
+                              img_save_dir=aug_img_dir, mask_save_dir=aug_mask_dir, count=1, 
+                              mask_suffix="_GT", save_prefix="aug_", save_suffix="_aug", save_mask_suffix="_GT_aug")
     print(pipeline())
     
     # #testing on the fly transformation
@@ -381,7 +389,7 @@ if __name__ == "__main__":
     # pipeline1 = DataGenPipeline(save=False, load=False, transforms=transforms,
     #                             img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
     #                             img_save_dir=img_save_dir, mask_save_dir=mask_save_dir, count=1)
-    # pipeline2 = DataGenPipeline(save=False, load=False, transforms=[Resize((256,256))],
+    # pipeline2 = DataGenPipeline(save=False, load=False, transforms=[Resize((448,448))],
     #                             img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
     #                             img_save_dir=img_save_dir, mask_save_dir=mask_save_dir, count=1)
     # #pipelines are created to transfrom images
