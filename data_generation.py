@@ -203,7 +203,33 @@ class RandomSequential():
 class DataGenPipeline():
     def __init__(self, save:bool=False, load:bool=False, transforms=[], img_ld_dir:str=None, mask_ld_dir:str=None, 
                  img_save_dir:str=None, mask_save_dir:str=None, count:int=1, 
-                 mask_suffix:str='', save_prefix:str='', save_suffix:str='', save_mask_suffix:str=''):
+                 mask_suffix:str='', save_prefix:str='', save_suffix:str='', save_mask_suffix:str='', start_idx:int=0):
+        '''
+        if both save and load are true, pipeline processes all images and masks in the directories
+        and saves them to the save directories, then sets load and save to False. Then it acts
+        like a generator, yielding processed images and masks.
+        if only load is true, pipeline acts like a generator, yielding processed images and masks.
+        if only save is true, pipeline applies transformations and saves the processed images and masks
+        to the save directories, then increments the id for the next save.
+        
+        Args:
+            save (bool): Whether to save the processed images and masks.
+            load (bool): Whether to load and process images and masks from the directories.
+            transforms (list): List of transformations to apply to the images and masks.
+            img_ld_dir (str): Directory to load images from.
+            mask_ld_dir (str): Directory to load masks from.
+            img_save_dir (str): Directory to save processed images to.
+            mask_save_dir (str): Directory to save processed masks to.
+            count (int):Number of times of looping through images to generate data.
+                        only applicable when load is true.
+            mask_suffix (str):  Suffix to append to the mask filenames when loading. 
+                                example: img: "MyData_1.png", mask: "MyData_1_GT.png", herer "_GT" is the suffix.
+            save_prefix (str): Prefix to prepend to the saved image and mask filenames.
+            save_suffix (str): Suffix to append to the saved image and mask filenames.
+            save_mask_suffix (str): Suffix to append to the saved mask filenames.
+                                    example: img: "save_1_aug.png", mask: "save_1_aug_GT.png", here "_GT" is the save_mask_suffix. 
+        '''
+        
         if load:
             self.img_ld_dir = Path(img_ld_dir)
             self.mask_ld_dir = Path(mask_ld_dir)
@@ -227,7 +253,7 @@ class DataGenPipeline():
         self.load = load
         self.save = save
         self.transforms = transforms
-        self.id = 0
+        self.id = start_idx
         self.count = count
         self.mask_suffix = mask_suffix
         self.save_prefix = save_prefix
@@ -316,6 +342,8 @@ if __name__ == "__main__":
     
     crack_img_dir = "Crack/images"
     crack_mask_dir = "Crack/gt"
+    crack_imgts_dir = "Crack/test_img"
+    crack_maskts_dir = "Crack/test_label"
     
     img_ld_dir = 'test/imgs'
     mask_ld_dir = 'test/masks'
@@ -366,10 +394,26 @@ if __name__ == "__main__":
         # cv2.waitKey(500)
         
     #testing both load and save
+    howard_dir_img = "howard/images"
+    howard_dir_mask = "howard/gt"
+    howard_ts_img = "howard/images_ts"
+    howard_ts_mask = "howard/gt_ts"
+    
+    transforms = [
+        RandomSequential([        #randomly select and apply transfroms
+            RandomRotate(),
+            RandomFlip(),
+            RandomJitter(),
+            RandomGaussianNoise(),
+            RandomGaussianBlur(),
+        ], p=0.8),
+        Resize(size=(448, 448)),  #resize after cropping
+    ]
+    
     pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
-                              img_ld_dir=crack_img_dir, mask_ld_dir=crack_mask_dir,
-                              img_save_dir=aug_img_dir, mask_save_dir=aug_mask_dir, count=1, 
-                              mask_suffix="_GT", save_prefix="aug_", save_suffix="_aug", save_mask_suffix="_GT_aug")
+                              img_ld_dir=crack_imgts_dir, mask_ld_dir=crack_maskts_dir,
+                              img_save_dir=howard_ts_img, mask_save_dir=howard_ts_mask, count=5, 
+                              mask_suffix="_GT", save_prefix="", save_suffix="", save_mask_suffix="_GT", start_idx = 120)
     print(pipeline())
     
     # #testing on the fly transformation

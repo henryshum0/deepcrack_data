@@ -50,9 +50,9 @@ def check_imgmask(img_dir: str, mask_dir: str):
             continue
         mask = np.stack([mask>0] * 3, axis=-1)
         img[mask] = 255
-        print("displaying image and mask for", img_file.name)
-        plt.imshow(img)
-        plt.show()
+        # print("displaying image and mask for", img_file.name)
+        # plt.imshow(img)
+        # plt.show()
         
         
 if __name__ == "__main__":
