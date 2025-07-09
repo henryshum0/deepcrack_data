@@ -70,8 +70,10 @@ def check_imgmask(img_dir: str, mask_dir: str):
         key = cv2.waitKey(0) & 0xFF
         if key == ord('d'):  # Next image
             idx += 1
+            idx = min(idx, len(out_imgs) - 1)
         elif key == ord('a'):  # Previous image
             idx -= 1
+            idx = max(0, idx)
         elif key == ord('s'):
             display_original = not display_original
         elif key == 27:  # ESC to exit
