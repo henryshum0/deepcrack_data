@@ -9,12 +9,10 @@ class Resize():
     """
     Resize the image and mask to a specified size.
     """
-    def __init__(self, size=(256, 256)):
+    def __init__(self, size:tuple[int, int]=(256, 256)):
         self.size = size
 
-    def __call__(self, image=None, mask=None):
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        assert mask.ndim == 2, f"Mask must be a 2D array {mask.ndim}D, but got {mask.shape}"
+    def __call__(self, image:np.ndarray, mask:np.ndarray):
         if image is not None:
             image = cv2.resize(image, self.size)
         if mask is not None:
@@ -25,10 +23,8 @@ class RandomCrop():
     """
     Randomly crop the image and mask to a square size.
     """
-    def __call__(self, image=None, mask=None, center_x=None, center_y=None) :
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        assert mask.ndim == 2, f"Mask must be a 2D array {mask.ndim}D, but got {mask.shape}"
-        
+    def __call__(self, image:np.ndarray, mask:np.ndarray, 
+                 center_x:int=None, center_y:int=None) :        
         #randomly select a crop length
         crop_len = min(image.shape[0], image.shape[1], randint(4,10) * 128)
         
@@ -48,9 +44,7 @@ class RandomCrop():
         return cropped_image, cropped_mask
 
 class RandomRotate():
-    def __call__(self, image=None, mask=None):
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        assert mask.ndim == 2, f"Mask must be a 2D array {mask.ndim}D, but got {mask.shape}"
+    def __call__(self, image:np.ndarray, mask:np.ndarray):
         angle = np.random.randint(0, 360)
         M = cv2.getRotationMatrix2D((image.shape[1] // 2, image.shape[0] // 2), angle, 1.0)
         rotated_image = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]))
@@ -58,10 +52,7 @@ class RandomRotate():
         return rotated_image, rotated_mask
 
 class RandomFlip():
-    def __call__(self, image=None, mask=None):
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        assert mask.ndim == 2, f"Mask must be a 2D array {mask.ndim}D, but got {mask.shape}"
-        
+    def __call__(self, image:np.ndarray, mask:np.ndarray):        
         if np.random.rand() > 0.5:
             image = cv2.flip(image, 1)  # Horizontal flip
             mask = cv2.flip(mask, 1)
@@ -75,9 +66,7 @@ class RandomBoostContrast():
     """
     Boost the contrast of the image.
     """
-    def __call__(self, image=None, mask=None):
-        assert image is not None, "Image must be provided for contrast boosting."
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
+    def __call__(self, image:np.ndarray, mask:np.ndarray):
         alpha = np.random.uniform(1.3, 2)  # Contrast factor, can be adjusted
         # Convert to float32 for better precision
         image = image.astype(np.float32)
@@ -91,10 +80,8 @@ class RandomJitter():
     """
     Randomly adjust brightness, contrast, saturation, and hue of the image.
     """
-    def __call__(self, image=None, mask=None):
-        assert image is not None, "Image must be provided for random jitter."
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        
+    def __call__(self, image:np.ndarray, mask:np.ndarray):
+
         # Randomly adjust brightness
         brightness = np.random.uniform(0.5, 1.5)
         image = cv2.convertScaleAbs(image, alpha=brightness, beta=0)
@@ -118,10 +105,7 @@ class RandomGaussianNoise():
     """
     Add random Gaussian noise to the image.
     """
-    def __call__(self, image=None, mask=None):
-        assert image is not None, "Image must be provided for adding Gaussian noise."
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        
+    def __call__(self, image:np.ndarray, mask:np.ndarray):
         sigma = np.random.uniform(1, 6)  # Randomly select a sigma value for noise
         noise = np.random.normal(0, sigma, image.shape).astype(np.uint8)
         noisy_image = cv2.add(image, noise)
@@ -133,24 +117,18 @@ class RandomGaussianBlur():
     Apply random Gaussian blur to the image.
     """
     
-    def __call__(self, image=None, mask=None, ksize=(3, 3)):
-        assert image is not None, "Image must be provided for Gaussian blur."
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        
+    def __call__(self, image:np.ndarray, mask:np.ndarray, ksize:tuple[int,int]=(3, 3)): 
         blurred_image = cv2.GaussianBlur(image, ksize, sigmaX = 3, sigmaY= 3)
         
         return blurred_image, mask
 
 class RandomCropResize():
-    def __init__(self, has_mask:float = 0.9, size=(256, 256)):
+    def __init__(self, has_mask:float = 0.9, size:tuple[int,int]=(256, 256)):
         self.has_mask = has_mask
         self.resize = Resize(size)
         self.random_crop = RandomCrop()
 
-    def __call__(self, image=None, mask=None):
-        assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
-        assert mask.ndim == 2, f"Mask must be a 2D array {mask.ndim}D, but got {mask.shape}"
-        
+    def __call__(self, image:np.ndarray, mask:np.ndarray):
         if np.random.rand() < self.has_mask:
             mask_indices = np.argwhere(mask > 0)
             if mask_indices.size == 0:
@@ -168,11 +146,11 @@ class RandomCropResize():
         return self.resize(cropped_image, cropped_mask)
              
 class RandomRotateRandomCropResize():
-    def __init__(self, target_size=(256, 256)):
+    def __init__(self, target_size:tuple[int,int]=(256, 256)):
         self.resize = Resize(target_size)
         self.random_crop = RandomCrop()
         self.rotate = RandomRotate()
-    def __call__(self, img, mask):
+    def __call__(self, img:np.ndarray, mask:np.ndarray):
         rotated_img, rotated_mask = self.rotate(img, mask)
         cropped_img, cropped_mask = self.random_crop(rotated_img, rotated_mask)
         resized_img, resized_mask = self.resize(cropped_img, cropped_mask)
@@ -186,10 +164,7 @@ class RandomSequential():
         self.transforms = transforms
         self.p = 0.3
 
-    def __call__(self, image=None, mask=None):
-        assert image is not None, "Image must be provided for random sequence of transformations."
-        assert mask is not None, "Mask must be provided for random sequence of transformations."
-        
+    def __call__(self, image:np.ndarray, mask:np.ndarray):        
         for transform in self.transforms:
             if np.random.rand() < self.p:  # Randomly apply each transformation
                 assert callable(transform), f"Transform {transform} is not callable."
@@ -200,9 +175,40 @@ class RandomSequential():
                     raise ValueError(f"Unsupported transform type: {type(transform)}")
         return image, mask
 
+class SlideCrop():
+    """
+    ONLY USE THIS TO GENERATE CROP IMAGES
+    Slide crop the image and mask to a specified size.
+    """
+    def __init__(self, size:tuple[int,int]=(256, 256), step:int=128):
+        self.size = size
+        self.step = step
+
+    def __call__(self, image:np.ndarray, mask:np.ndarray):
+        h, w = image.shape[:2]
+        crop_images = []
+        crop_masks = []
+        for y in range(0, h, self.step):
+            for x in range(0, w, self.step):
+                if y + self.size[0] > h and x + self.size[1] < w:
+                    cropped_image = image[y:h, x:x + self.size[1]]
+                    cropped_mask = mask[y:h, x:x + self.size[1]]
+                elif y + self.size[0] < h and x + self.size[1] > w:
+                    cropped_image = image[y:y + self.size[0], x:w]
+                    cropped_mask = mask[y:y + self.size[0], x:w]
+                elif y + self.size[0] > h and x + self.size[1] > w:
+                    cropped_image = image[y:h, x:w]
+                    cropped_mask = mask[y:h, x:w]
+                else:    
+                    cropped_image = image[y:y + self.size[0], x:x + self.size[1]]
+                    cropped_mask = mask[y:y + self.size[0], x:x + self.size[1]]
+                crop_images.append(cropped_image)
+                crop_masks.append(cropped_mask)
+        return crop_images, crop_masks
+    
 class DataGenPipeline():
-    def __init__(self, save:bool=False, load:bool=False, transforms=[], img_ld_dir:str=None, mask_ld_dir:str=None, 
-                 img_save_dir:str=None, mask_save_dir:str=None, count:int=1, 
+    def __init__(self, save:bool=False, load:bool=False, transforms=[], img_ld_dir:str='', mask_ld_dir:str='', 
+                 img_save_dir:str='', mask_save_dir:str='', count:int=1, 
                  mask_suffix:str='', save_prefix:str='', save_suffix:str='', save_mask_suffix:str='', start_idx:int=0):
         '''
         if both save and load are true, pipeline processes all images and masks in the directories
@@ -242,7 +248,8 @@ class DataGenPipeline():
             
             
         if save:
-            if img_save_dir is None or mask_save_dir is None:
+            if (img_save_dir is None or img_save_dir =='' 
+                or mask_save_dir is None or mask_save_dir == ''):
                 img_save_dir = img_ld_dir + "/processed_imgs"
                 mask_save_dir = mask_ld_dir + "/processed_masks"
             self.img_save_dir = Path(img_save_dir)
@@ -264,7 +271,7 @@ class DataGenPipeline():
         #case: when both load and save are true, pipeline processes all images and masks in the directories
         #and saves them to the save directories, then sets load and save to False
         if self.load and self.save and image is None and mask is None:
-            print("pipeline is in loand and save")
+            print("pipeline is in load and and save")
             for transformed, _ in self.load_transfrom_data():
                 img, msk = transformed
                 self.save_data(img, msk)
@@ -291,6 +298,14 @@ class DataGenPipeline():
         #case: only when image and mask are specified, pipeline applies transformations
         else:
             print("pipeline is in normal mode")
+            if not isinstance(image, np.ndarray) or not isinstance(mask, np.ndarray):
+                raise TypeError("Image and mask must be numpy arrays.")
+            if image.ndim != 3 or mask.ndim != 2:
+                raise ValueError(f"Image must be a 3D array (H, W, C), but got {image.ndim}D. Mask must be a 2D array (H, W), but got {mask.ndim}D.")
+            if image.shape[2] != 3:
+                raise ValueError(f"Image must have 3 channels (RGB), but got {image.shape[2]} channels.")
+            if image.shape[:2] != mask.shape:
+                raise ValueError(f"Image and mask must have the same dimensions, but got {image.shape[:2]} and {mask.shape}.")
             return self.apply_transforms(image, mask)
     
     def apply_transforms(self, image, mask):
@@ -299,18 +314,39 @@ class DataGenPipeline():
         return image, mask
     
     def save_data(self, image, mask):
-        if self.save:
+        assert self.img_save_dir is not None or self.img_save_dir != "", "Image save directory is not specified."
+        assert self.mask_save_dir is not None or self.mask_save_dir != "", "Mask save directory is not specified."
+        
+        if self.save and isinstance(image, np.ndarray) and isinstance(mask, np.ndarray):
+            assert image.shape[2] == 3, f"Image must have 3 channels (RGB), but got {image.shape[2]} channels"
+            assert mask.ndim == 2, f"Mask must be a 2D array {mask.ndim}D, but got {mask.shape}"
+            assert image.shape[:2] == mask.shape, f"Image and mask must have the same dimensions, but got {image.shape[:2]} and {mask.shape}"
             img_path = self.img_save_dir / f"{self.save_prefix}{self.id}{self.save_suffix}.png"
             mask_path = self.mask_save_dir / f"{self.save_prefix}{self.id}{self.save_suffix}{self.save_mask_suffix}.png"
             cv2.imwrite(str(img_path), image)
             mask = (mask / 255).astype(np.uint8)*255  # Ensure mask is in the correct format
-            assert np.unique(mask).all() in [0, 1, 255], "Mask should be binary or grayscale with values 0, 1, or 255."
             cv2.imwrite(str(mask_path), mask)
             print(f"Saved {img_path} and {mask_path}")
             print(f"Image shape: {image.shape}, Mask shape: {mask.shape}")
             self.id += 1
-        else:
+        
+        elif self.save and isinstance(image, list) and isinstance(mask, list):
+            for i, (img, msk) in enumerate(zip(image, mask)):
+                assert img.shape[2] == 3, f"Image must have 3 channels (RGB), but got {img.shape[2]} channels"
+                assert msk.ndim == 2, f"Mask must be a 2D array {msk.ndim}D, but got {msk.shape}"
+                assert img.shape[:2] == msk.shape, f"Image and mask must have the same dimensions, but got {img.shape[:2]} and {msk.shape}"
+                img_path = self.img_save_dir / f"{self.save_prefix}{self.id + i}{self.save_suffix}.png"
+                mask_path = self.mask_save_dir / f"{self.save_prefix}{self.id + i}{self.save_suffix}{self.save_mask_suffix}.png"
+                cv2.imwrite(str(img_path), img)
+                msk = (msk / 255).astype(np.uint8)*255
+                cv2.imwrite(str(mask_path), msk)
+            print(f"saved images id from {self.id} to {self.id + len(image) - 1}")
+            self.id += len(image)
+            
+        elif not self.save:
             raise RuntimeError("Save mode is not enabled. Cannot save data.")
+        else:
+            raise RuntimeError("image or mask is not a numpy array or list.")
         
     def load_transfrom_data(self):
         if self.load:
@@ -357,16 +393,16 @@ if __name__ == "__main__":
     # noncontrast_img_dir = 'test/noncontrast_imgs'
     # noncontrast_mask_dir = 'test/noncontrast_masks'
     
-    transforms = [  #transfroms to apply
-        RandomSequential([        #randomly select and apply transfroms
-            RandomRotate(),
-            RandomFlip(),
-            RandomJitter(),
-            RandomGaussianNoise(),
-            RandomGaussianBlur(),
-        ], p=0.8),
-        RandomCropResize(size=(448, 448)),  #resize after cropping
-    ]                  
+    # transforms = [  #transfroms to apply
+    #     RandomSequential([        #randomly select and apply transfroms
+    #         RandomRotate(),
+    #         RandomFlip(),
+    #         RandomJitter(),
+    #         RandomGaussianNoise(),
+    #         RandomGaussianBlur(),
+    #     ], p=0.8),
+    #     RandomCropResize(size=(448, 448)),  #resize after cropping
+    # ]                  
     
     # #testing save only
     # pipeline = DataGenPipeline(save=True, load=False, transforms=transforms,
@@ -394,27 +430,16 @@ if __name__ == "__main__":
         # cv2.waitKey(500)
         
     #testing both load and save
-    howard_dir_img = "howard/images"
-    howard_dir_mask = "howard/gt"
-    howard_ts_img = "howard/images_ts"
-    howard_ts_mask = "howard/gt_ts"
     
-    transforms = [
-        RandomSequential([        #randomly select and apply transfroms
-            RandomRotate(),
-            RandomFlip(),
-            RandomJitter(),
-            RandomGaussianNoise(),
-            RandomGaussianBlur(),
-        ], p=0.8),
-        Resize(size=(448, 448)),  #resize after cropping
-    ]
+    # transforms = [
+    #     SlideCrop(size=(448, 448), step=448)
+    # ]
     
-    pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
-                              img_ld_dir=crack_imgts_dir, mask_ld_dir=crack_maskts_dir,
-                              img_save_dir=howard_ts_img, mask_save_dir=howard_ts_mask, count=5, 
-                              mask_suffix="_GT", save_prefix="", save_suffix="", save_mask_suffix="_GT", start_idx = 120)
-    print(pipeline())
+    # pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
+    #                           img_ld_dir=crack_imgts_dir, mask_ld_dir=crack_maskts_dir,
+    #                           img_save_dir=howard_ts_img, mask_save_dir=howard_ts_mask, count=1, 
+    #                           mask_suffix="_GT", save_prefix="", save_suffix="", save_mask_suffix="_GT")
+    # print(pipeline())
     
     # #testing on the fly transformation
     # pipeline = DataGenPipeline(save=False, load=False, transforms=transforms) 
@@ -463,6 +488,42 @@ if __name__ == "__main__":
     #     plt.axis('off')
     
     # plt.show(block=True)
+    
+    # #test slide crop functionality
+    # img_dir = "test/images"
+    # mask_dir = "test/masks"
+    # img_out_dir = "test/images_aug"
+    # mask_out_dir = "test/masks_aug"
+    
+    # transforms = [SlideCrop(size=(448, 448), step=448)]
+    # pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
+    #                           img_ld_dir=img_dir, mask_ld_dir=mask_dir,
+    #                           img_save_dir=img_out_dir, mask_save_dir=mask_out_dir,
+    #                           mask_suffix="_GT")
+    
+    # print(pipeline())
+    # img_rows = []
+    # mask_rows = []
+    # for i in range(10):
+    #     img_row = []
+    #     mask_row = []
+    #     for j in range(6):
+    #         img_file = f"{img_out_dir}/{i*6 + j}.png"
+    #         mask_file = f"{mask_out_dir}/{i*6 + j}.png"
+    #         img_row.append(cv2.imread(img_file))
+    #         mask_row.append(cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE))
+    #     img_rows.append(np.concatenate(img_row, axis=1))
+    #     mask_rows.append(np.concatenate(mask_row, axis=1))
+    # out_img = np.concatenate(img_rows, axis=0)
+    # out_img = cv2.resize(out_img, (out_img.shape[1] // 4, out_img.shape[0] // 4))
+    # out_mask = np.concatenate(mask_rows, axis=0)
+    # out_mask = cv2.resize(out_mask, (out_mask.shape[1] // 4, out_mask.shape[0] // 4))
+    # # out_mask = np.stack([out_mask] * 3, axis=-1)  # Convert mask to 3D for concatenation
+    # # tgt = np.concatenate([out_img, out_mask], axis=1)
+    # bool_idx = np.where(out_mask > 0)
+    # out_img[bool_idx] = [0, 255, 0]  # Set the color of the mask area to green
+    # cv2.imshow("Augmented Images", out_img)
+    # cv2.waitKey(0)
 
 
 # On the left are original resized images

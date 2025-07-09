@@ -2,6 +2,7 @@ from PIL import Image
 from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
+import cv2
 
 def check_imgmask(img_dir: str, mask_dir: str):
     """
@@ -16,6 +17,9 @@ def check_imgmask(img_dir: str, mask_dir: str):
     """
     img_path = Path(img_dir)
     mask_path = Path(mask_dir)
+    out_imgs = []
+    original_imgs = []
+    out_img_names = []
 
     if not img_path.exists():
         raise FileNotFoundError(f"Image directory {img_path} does not exist.")
@@ -48,11 +52,31 @@ def check_imgmask(img_dir: str, mask_dir: str):
             print(f"Image {img_file.name} and mask {mask_file.name} have different dimensions: "
                   f"Image shape: {img.shape}, Mask shape: {mask.shape}")
             continue
-        mask = np.stack([mask>0] * 3, axis=-1)
-        img[mask] = 255
-        # print("displaying image and mask for", img_file.name)
-        # plt.imshow(img)
-        # plt.show()
+        bool_idx = mask > 0
+        out_img = img.copy()
+        out_img[bool_idx] = [0, 255, 0]
+        print(f"Image {img_file.name} and mask {mask_file.name} are matched.")
+        out_imgs.append(cv2.resize(out_img, (1280, 720)))
+        out_img_names.append(img_file.name)
+        original_imgs.append(cv2.resize(img, (1280, 720)))
+    idx = 0
+    display_original = False
+    while 0 <= idx < len(out_imgs):
+        if display_original:
+            cv2.imshow("image", original_imgs[idx])
+        else:
+            cv2.imshow("image", out_imgs[idx])
+        print(f"Image: {out_img_names[idx]}")
+        key = cv2.waitKey(0) & 0xFF
+        if key == ord('d'):  # Next image
+            idx += 1
+        elif key == ord('a'):  # Previous image
+            idx -= 1
+        elif key == ord('s'):
+            display_original = not display_original
+        elif key == 27:  # ESC to exit
+            break
+    cv2.destroyAllWindows()
         
         
 if __name__ == "__main__":
