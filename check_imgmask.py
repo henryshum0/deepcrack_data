@@ -34,12 +34,12 @@ def check_imgmask(img_dir: str, mask_dir: str):
         print(f"Number of images: {len(img_files)}, Number of masks: {len(mask_files)}")
     
     for img_file in img_files:
-        img = np.array(Image.open(str(img_file))).astype(np.uint8)
+        img = cv2.imread(str(img_file), cv2.IMREAD_COLOR)
         mask_file = (mask_path / (str(img_file.stem) +  '_GT' + '.png'))
         if not mask_file.exists():
             print(f"Mask file {mask_file} does not exist for image {img_file.name}.")
             continue
-        mask = np.array(Image.open(str(mask_file)).convert('L')).astype(np.uint8)
+        mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
         if mask is None:
             print(f"mask for {img_file.name} does not exists")
             continue
@@ -82,6 +82,6 @@ def check_imgmask(img_dir: str, mask_dir: str):
         
         
 if __name__ == "__main__":
-    img_dir = "Crack/images"
-    mask_dir = "Crack/gt"
+    img_dir = "test/images"
+    mask_dir = "test/masks"
     check_imgmask(img_dir, mask_dir)

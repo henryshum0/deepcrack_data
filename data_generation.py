@@ -381,7 +381,7 @@ if __name__ == "__main__":
     crack_imgts_dir = "Crack/test_img"
     crack_maskts_dir = "Crack/test_label"
     
-    img_ld_dir = 'test/imgs'
+    img_ld_dir = 'test/images'
     mask_ld_dir = 'test/masks'
     
     img_save_dir = 'test/processed_imgs'
@@ -393,16 +393,16 @@ if __name__ == "__main__":
     # noncontrast_img_dir = 'test/noncontrast_imgs'
     # noncontrast_mask_dir = 'test/noncontrast_masks'
     
-    # transforms = [  #transfroms to apply
-    #     RandomSequential([        #randomly select and apply transfroms
-    #         RandomRotate(),
-    #         RandomFlip(),
-    #         RandomJitter(),
-    #         RandomGaussianNoise(),
-    #         RandomGaussianBlur(),
-    #     ], p=0.8),
-    #     RandomCropResize(size=(448, 448)),  #resize after cropping
-    # ]                  
+    transforms = [  #transfroms to apply
+        RandomSequential([        #randomly select and apply transfroms
+            RandomRotate(),
+            RandomFlip(),
+            RandomJitter(),
+            RandomGaussianNoise(),
+            RandomGaussianBlur(),
+        ], p=0.8),
+        RandomCropResize(size=(448, 448)),  #resize after cropping
+    ]                  
     
     # #testing save only
     # pipeline = DataGenPipeline(save=True, load=False, transforms=transforms,
@@ -411,23 +411,24 @@ if __name__ == "__main__":
     # pipeline(img, mask)
     
     #testing load only
-    # pipeline = DataGenPipeline(save=False, load=True, transforms=transforms,
-    #                           img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir)
+    pipeline = DataGenPipeline(save=False, load=True, transforms=transforms,
+                              img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
+                              mask_suffix="_GT")
 
-    # for transfromed, files in pipeline():
-    #     img, mask = transfromed
-    #     img_file, mask_file = files
-    #     og_img = cv2.resize(cv2.imread(img_file), (448, 448))
-    #     og_mask = cv2.resize(cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE), (448, 448))
-    #     print(f"Loaded {img_file} and {mask_file}")
-    #     print(f"Image shape: {img.shape}, Mask shape: {mask.shape}")
+    for transfromed, files in pipeline():
+        img, mask = transfromed
+        img_file, mask_file = files
+        og_img = cv2.resize(cv2.imread(img_file), (448, 448))
+        og_mask = cv2.resize(cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE), (448, 448))
+        print(f"Loaded {img_file} and {mask_file}")
+        print(f"Image shape: {img.shape}, Mask shape: {mask.shape}")
         
-        # img_out = np.concatenate([og_img, img], axis=1)  # Concatenate original and transformed images
-        # mask_out = np.concatenate([og_mask, mask], axis=1)
-        # mask_out = np.stack([mask_out] * 3, axis=-1)  # Convert mask to 3D for concatenation
-        # out_img = np.concatenate([img_out, mask_out], axis=0)  # Concatenate images and masks vertically
-        # cv2.imshow("Transformed Image and Mask", out_img)
-        # cv2.waitKey(500)
+        img_out = np.concatenate([og_img, img], axis=1)  # Concatenate original and transformed images
+        mask_out = np.concatenate([og_mask, mask], axis=1)
+        mask_out = np.stack([mask_out] * 3, axis=-1)  # Convert mask to 3D for concatenation
+        out_img = np.concatenate([img_out, mask_out], axis=0)  # Concatenate images and masks vertically
+        cv2.imshow("Transformed Image and Mask", out_img)
+        cv2.waitKey(0)
         
     #testing both load and save
     
