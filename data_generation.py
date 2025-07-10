@@ -158,7 +158,7 @@ class RandomRotateRandomCropResize():
     
 class RandomSequential():
     """
-    Apply a random sequence of transformations to the image and mask.
+    For each transform, randomly apply it with a probability p.
     """
     def __init__(self, transforms, p=0.3):
         self.transforms = transforms
@@ -376,20 +376,6 @@ if __name__ == "__main__":
     img = cv2.imread('test/imgs/0.png')
     mask = cv2.imread('test/masks/0.png', cv2.IMREAD_GRAYSCALE)
     
-    crack_img_dir = "Crack/images"
-    crack_mask_dir = "Crack/gt"
-    crack_imgts_dir = "Crack/test_img"
-    crack_maskts_dir = "Crack/test_label"
-    
-    img_ld_dir = 'test/images'
-    mask_ld_dir = 'test/masks'
-    
-    img_save_dir = 'test/processed_imgs'
-    mask_save_dir = 'test/processed_masks'
-    
-    aug_img_dir = 'test/contrast_imgs'
-    aug_mask_dir = 'test/contrast_masks'
-    
     # noncontrast_img_dir = 'test/noncontrast_imgs'
     # noncontrast_mask_dir = 'test/noncontrast_masks'
     
@@ -397,10 +383,7 @@ if __name__ == "__main__":
         RandomSequential([        #randomly select and apply transfroms
             RandomRotate(),
             RandomFlip(),
-            RandomJitter(),
-            RandomGaussianNoise(),
-            RandomGaussianBlur(),
-        ], p=0.8),
+        ], p=0.5),
         RandomCropResize(size=(448, 448)),  #resize after cropping
     ]                  
     
@@ -411,24 +394,24 @@ if __name__ == "__main__":
     # pipeline(img, mask)
     
     #testing load only
-    pipeline = DataGenPipeline(save=False, load=True, transforms=transforms,
-                              img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
-                              mask_suffix="_GT")
+    # pipeline = DataGenPipeline(save=False, load=True, transforms=transforms,
+    #                           img_ld_dir=img_ld_dir, mask_ld_dir=mask_ld_dir,
+    #                           mask_suffix="_GT")
 
-    for transfromed, files in pipeline():
-        img, mask = transfromed
-        img_file, mask_file = files
-        og_img = cv2.resize(cv2.imread(img_file), (448, 448))
-        og_mask = cv2.resize(cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE), (448, 448))
-        print(f"Loaded {img_file} and {mask_file}")
-        print(f"Image shape: {img.shape}, Mask shape: {mask.shape}")
+    # for transfromed, files in pipeline():
+    #     img, mask = transfromed
+    #     img_file, mask_file = files
+    #     og_img = cv2.resize(cv2.imread(img_file), (448, 448))
+    #     og_mask = cv2.resize(cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE), (448, 448))
+    #     print(f"Loaded {img_file} and {mask_file}")
+    #     print(f"Image shape: {img.shape}, Mask shape: {mask.shape}")
         
-        img_out = np.concatenate([og_img, img], axis=1)  # Concatenate original and transformed images
-        mask_out = np.concatenate([og_mask, mask], axis=1)
-        mask_out = np.stack([mask_out] * 3, axis=-1)  # Convert mask to 3D for concatenation
-        out_img = np.concatenate([img_out, mask_out], axis=0)  # Concatenate images and masks vertically
-        cv2.imshow("Transformed Image and Mask", out_img)
-        cv2.waitKey(0)
+    #     img_out = np.concatenate([og_img, img], axis=1)  # Concatenate original and transformed images
+    #     mask_out = np.concatenate([og_mask, mask], axis=1)
+    #     mask_out = np.stack([mask_out] * 3, axis=-1)  # Convert mask to 3D for concatenation
+    #     out_img = np.concatenate([img_out, mask_out], axis=0)  # Concatenate images and masks vertically
+    #     cv2.imshow("Transformed Image and Mask", out_img)
+    #     cv2.waitKey(0)
         
     #testing both load and save
     
@@ -436,11 +419,13 @@ if __name__ == "__main__":
     #     SlideCrop(size=(448, 448), step=448)
     # ]
     
-    # pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
-    #                           img_ld_dir=crack_imgts_dir, mask_ld_dir=crack_maskts_dir,
-    #                           img_save_dir=howard_ts_img, mask_save_dir=howard_ts_mask, count=1, 
-    #                           mask_suffix="_GT", save_prefix="", save_suffix="", save_mask_suffix="_GT")
-    # print(pipeline())
+    pipeline = DataGenPipeline(save=True, load=True, transforms=transforms,
+                              img_ld_dir="train_n_test/img_raw", 
+                              mask_ld_dir="train_n_test/masks_raw",
+                              img_save_dir="train_n_test/crop_img_tr", 
+                              mask_save_dir="train_n_test/crop_msk_tr", count=15, 
+                              mask_suffix="_GT", save_prefix="", save_suffix="", save_mask_suffix="_GT", start_idx=3605)
+    print(pipeline())
     
     # #testing on the fly transformation
     # pipeline = DataGenPipeline(save=False, load=False, transforms=transforms) 

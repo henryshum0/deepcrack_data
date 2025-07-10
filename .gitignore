@@ -3,3 +3,7 @@ test
 __pycache__
 data
 test.py
+train_n_test*
+train_n_test/*
+testset
+trainset

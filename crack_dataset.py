@@ -35,7 +35,7 @@ class CrackDataset(Dataset):
 
     def __getitem__(self, idx):
         img_file, mask_file = self.data[idx]
-        image = cv2.imread(str(img_file), cv2.IMREAD_COLOR)
+        image = cv2.imread(str(img_file), cv2.IMREAD_COLOR_RGB)
         mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
 
         if self.transform_pipeline:
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     
     #run the formatting.py first
     
-    img_path = "test/imgs"
+    img_path = "test/images"
     mask_path = "test/masks"
     transforms_list = [
         
@@ -58,11 +58,8 @@ if __name__ == "__main__":
         print(f"Image {i} shape: {img.shape}, Mask {i} shape: {mask.shape}")
         # Optionally, you can visualize the images and masks using matplotlib or any other library.
         # For example:
-        import matplotlib.pyplot as plt
-        plt.subplot(1, 2, 1)
-        plt.imshow(img.permute(1, 2, 0))
-        plt.subplot(1, 2, 2)
-        plt.imshow(mask.squeeze(), cmap='gray')
-        plt.show()
+        cv2.imshow("Image", img.numpy().transpose(1, 2, 0))
+        cv2.imshow("Mask", mask.numpy().transpose(1, 2, 0))
+        cv2.waitKey(0)
         # Note: The above visualization code is commented out to avoid unnecessary imports.
         # Uncomment it if you want to visualize the images and masks.  

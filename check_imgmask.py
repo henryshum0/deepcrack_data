@@ -1,7 +1,4 @@
-from PIL import Image
 from pathlib import Path
-import numpy as np
-from matplotlib import pyplot as plt
 import cv2
 
 def check_imgmask(img_dir: str, mask_dir: str):
@@ -33,7 +30,11 @@ def check_imgmask(img_dir: str, mask_dir: str):
         print("number of images and masks do not match.")
         print(f"Number of images: {len(img_files)}, Number of masks: {len(mask_files)}")
     
+    count = 0
     for img_file in img_files:
+        if count >= 1000:
+            break
+        count += 1
         img = cv2.imread(str(img_file), cv2.IMREAD_COLOR)
         mask_file = (mask_path / (str(img_file.stem) +  '_GT' + '.png'))
         if not mask_file.exists():
@@ -82,6 +83,6 @@ def check_imgmask(img_dir: str, mask_dir: str):
         
         
 if __name__ == "__main__":
-    img_dir = "test/images"
-    mask_dir = "test/masks"
+    img_dir = "train_n_test/crop_img_tr"
+    mask_dir = "train_n_test/crop_msk_tr"
     check_imgmask(img_dir, mask_dir)
