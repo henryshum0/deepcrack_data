@@ -83,16 +83,16 @@ class RandomJitter():
     def __call__(self, image:np.ndarray, mask:np.ndarray):
 
         # Randomly adjust brightness
-        brightness = np.random.uniform(0.5, 1.5)
+        brightness = np.random.uniform(0.8, 1.2)
         image = cv2.convertScaleAbs(image, alpha=brightness, beta=0)
         
         # Randomly adjust contrast
-        contrast = np.random.uniform(0.5, 1.5)
+        contrast = np.random.uniform(0.8, 1.2)
         image = cv2.convertScaleAbs(image, alpha=contrast, beta=0)
         
         # Randomly adjust saturation
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        hsv_image[:, :, 1] = np.clip(hsv_image[:, :, 1] * np.random.uniform(0.5, 1.5), 0, 255)
+        hsv_image[:, :, 1] = np.clip(hsv_image[:, :, 1] * np.random.uniform(0.8, 1.2), 0, 255)
         image = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
         
         # Randomly adjust hue
@@ -106,7 +106,7 @@ class RandomGaussianNoise():
     Add random Gaussian noise to the image.
     """
     def __call__(self, image:np.ndarray, mask:np.ndarray):
-        sigma = np.random.uniform(1, 6)  # Randomly select a sigma value for noise
+        sigma = np.random.uniform(0, 3)  # Randomly select a sigma value for noise
         noise = np.random.normal(0, sigma, image.shape).astype(np.uint8)
         noisy_image = cv2.add(image, noise)
         
