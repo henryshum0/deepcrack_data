@@ -123,13 +123,13 @@ class RandomGaussianBlur():
         return blurred_image, mask
 
 class RandomCropResize():
-    def __init__(self, has_mask:float = 0.9, size:tuple[int,int]=(256, 256)):
-        self.has_mask = has_mask
+    def __init__(self, has_crack:float = 0.9, size:tuple[int,int]=(256, 256)):
+        self.has_crack = has_crack
         self.resize = Resize(size)
         self.random_crop = RandomCrop()
 
     def __call__(self, image:np.ndarray, mask:np.ndarray):
-        if np.random.rand() < self.has_mask:
+        if np.random.rand() < self.has_crack:
             mask_indices = np.argwhere(mask > 0)
             if mask_indices.size == 0:
                 cropped_image, cropped_mask = self.random_crop(image, mask)

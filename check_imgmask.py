@@ -1,9 +1,10 @@
 from pathlib import Path
 import cv2
 
-def check_imgmask(img_dir: str, mask_dir: str):
+def check_imgmask(img_dir: str, mask_dir: str, mask_suffix: str = '_GT'):
     """
     Check if images and masks in the specified directories match in terms of filenames and dimensions.
+    Afterwards, overlay the masks on the images and display
     
     Args:
         img_dir (str): Path to the directory containing images.
@@ -36,7 +37,7 @@ def check_imgmask(img_dir: str, mask_dir: str):
             break
         count += 1
         img = cv2.imread(str(img_file), cv2.IMREAD_COLOR)
-        mask_file = (mask_path / (str(img_file.stem) +  '_GT' + '.png'))
+        mask_file = (mask_path / (str(img_file.stem) +  mask_suffix + '.png'))
         if not mask_file.exists():
             print(f"Mask file {mask_file} does not exist for image {img_file.name}.")
             continue

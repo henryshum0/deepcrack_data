@@ -2,10 +2,10 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from pathlib import Path
 import cv2
-import data_generation as T
+import data_proccess.data_generation as D
 
 class CrackDataset(Dataset):
-    def __init__(self, img_path:str=None, mask_path:str=None, transforms=[]):
+    def __init__(self, img_path:str=None, mask_path:str=None, transforms=[D.Resize((448,448))]):
         
         # checking if image and mask paths are valid
         self.img_path = Path(img_path)
@@ -20,15 +20,15 @@ class CrackDataset(Dataset):
         self.img_files = sorted([f for f in self.img_path.rglob("*") if f.suffix in exts and f.stem.isdigit()])
         self.mask_files = sorted([f for f in self.mask_path.rglob("*") if f.suffix in exts and f.stem.isdigit()])
         if len(self.img_files) == 0:
-            raise ValueError(f"No image files found in {self.img_path}.")
+            raise FileExistsError(f"No image files found in {self.img_path}.")
         if len(self.mask_files) == 0:
-            raise ValueError(f"No mask files found in {self.mask_path}.")
+            raise FileExistsError(f"No mask files found in {self.mask_path}.")
         if len(self.img_files) != len(self.mask_files):
-            raise ValueError(f"Number of images ({len(self.img_files)}) does not match number of masks ({len(self.mask_files)}).")
+            raise FileExistsError(f"Number of images ({len(self.img_files)}) does not match number of masks ({len(self.mask_files)}).")
         
         self.data = list(zip(self.img_files, self.mask_files))
         self.data = sorted(self.data, key=lambda x: int(x[0].stem))
-        self.transform_pipeline = T.DataGenPipeline(transforms)
+        self.transform_pipeline = D.DataGenPipeline(transforms)
 
     def __len__(self):
         return len(self.data)
